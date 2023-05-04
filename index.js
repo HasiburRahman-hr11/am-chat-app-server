@@ -2,7 +2,8 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const fileUpload = require("express-fileupload");
-const { Server } = require("socket.io");
+const socketio = require('socket.io');
+
 http = require("http");
 
 const userRoute = require("./routes/userRoute");
@@ -11,7 +12,9 @@ const messageRoute = require("./routes/messageRoute");
 
 require("dotenv").config();
 
+
 const app = express();
+
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -24,16 +27,16 @@ app.use(userRoute);
 app.use(chatRoute);
 app.use(messageRoute);
 
-const server = http.createServer(app);
-const PORT = process.env.PORT || 8080;
-const io = require("socket.io")(8800, { cors: { origin: "*" } });
 
-// const io = new Server(8800, {
-//   cors: {
-//     origin: '*',
-//     methods: ['GET', 'POST'],
-//   },
-// });
+const PORT = process.env.PORT || 8080;
+// const io = require("socket.io")(8800, { cors: { origin: "*" } });
+
+
+
+const server = app.listen(PORT, () => {
+  console.log(`Server is connected at http://localhost:${PORT}`);
+});
+const io = socketio(server ,{ cors: { origin: "*" } });
 
 let users = [];
 
@@ -61,10 +64,12 @@ io.on("connection", (socket) => {
   //send and get message
   socket.on("sendMessage", ({ senderId, receiverId, text }) => {
     const user = getUser(receiverId);
-    io.to(user.socketId).emit("getMessage", {
-      senderId,
-      text,
-    });
+    if (user && user?.socketId) {
+      io.to(user.socketId).emit("getMessage", {
+        senderId,
+        text,
+      });
+    }
   });
 
   //when disconnect
@@ -75,15 +80,17 @@ io.on("connection", (socket) => {
   });
 });
 
+
+
 mongoose
   .connect(
     `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.ifpuy1o.mongodb.net/am-chat`
   )
   .then(() => {
     console.log("Database Connected.");
-    app.listen(PORT, () => {
-      console.log(`Server is connected at http://localhost:${PORT}`);
-    });
+    // app.listen(PORT, () => {
+    //   console.log(`Server is connected at http://localhost:${PORT}`);
+    // });
   })
   .catch((error) => {
     console.log(error);
