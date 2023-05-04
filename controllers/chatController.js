@@ -30,7 +30,7 @@ exports.getChatByUserId = async (req, res) => {
   try {
     const chat = await Chat.find({
       members: { $in: [userId] },
-    });
+    }).sort({updatedAt: -1});
     res.status(200).json(chat);
   } catch (error) {
     console.log(error);
